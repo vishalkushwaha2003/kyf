@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyf/app/routes/app_routes.dart';
+import 'package:kyf/services/auth_service.dart';
+import 'package:kyf/utils/toast.dart';
 
 /// Login Screen - Phone Number Input
 /// User enters phone number to receive OTP
@@ -16,6 +19,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
+  final _authService = AuthService();
   bool _isLoading = false;
 
   @override
@@ -29,17 +33,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // TODO: Implement actual OTP sending logic (Firebase, Twilio, etc.)
-    await Future.delayed(const Duration(seconds: 1));
+    final phoneNumber = '+91${_phoneController.text}';
+    final response = await _authService.generateOtp(phoneNumber: phoneNumber);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // Navigate to OTP verification screen with phone number
-    context.push(
-      AppRoutes.verifyOtp,
-      extra: _phoneController.text,
-    );
+    if (response.success) {
+      AppToast.success(context, 'OTP sent successfully!');
+      
+      // Safely extract reference_id from response
+      // Response structure: {body: "{\"data\": {\"reference_id\": \"xxx\"}}"}
+      String referenceId = '';
+      try {
+        final body = response.data['body'];
+        if (body != null && body is String) {
+          // Body is a JSON string, parse it
+          final bodyData = Map<String, dynamic>.from(
+            (const JsonDecoder().convert(body)) as Map,
+          );
+          if (bodyData['data'] != null) {
+            referenceId = bodyData['data']['reference_id']?.toString() ?? '';
+          }
+        } else if (body != null && body['data'] != null) {
+          referenceId = body['data']['reference_id']?.toString() ?? '';
+        }
+      } catch (e) {
+        debugPrint('Error extracting referenceId: $e');
+      }
+      
+      debugPrint('Extracted referenceId: $referenceId');
+      
+      // Navigate to OTP verification screen with phone number and referenceId
+      context.push(
+        AppRoutes.verifyOtp,
+        extra: {
+          'phoneNumber': _phoneController.text,
+          'referenceId': referenceId,
+        },
+      );
+    } else {
+      AppToast.error(context, response.message ?? 'Failed to send OTP');
+    }
   }
 
   @override
