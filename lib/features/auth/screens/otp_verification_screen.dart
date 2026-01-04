@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyf/app/routes/app_routes.dart';
 import 'package:kyf/services/auth_service.dart';
+import 'package:kyf/services/storage_service.dart';
+import 'package:kyf/socket/socket_authentication.dart';
 import 'package:kyf/utils/toast.dart';
 
 /// OTP Verification Screen
@@ -116,7 +118,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         final token = data?['token'] as String? ?? '';
         final fullName = data?['fullName'] as String? ?? '';
         
-        // TODO: Save token to secure storage
+        // Save token to local storage
+        final storage = await StorageService.getInstance();
+        await storage.saveToken(token);
+        await storage.setLoggedIn(true);
+        debugPrint('Token saved to storage');
+        
+        // Connect socket immediately after login
+        debugPrint('Connecting socket after login...');
+        SocketAuthentication.ensureAuthenticated().then((authenticated) {
+          debugPrint('Socket authenticated: $authenticated');
+        }).catchError((e) {
+          debugPrint('Socket authentication error: $e');
+        });
+        
         debugPrint('isAlreadyVerified: $isAlreadyVerified');
         
         if (isAlreadyVerified) {
