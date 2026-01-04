@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyf/app/routes/app_routes.dart';
+import 'package:kyf/services/auth_service.dart';
 import 'package:kyf/utils/toast.dart';
 
 /// OTP Verification Screen
@@ -10,10 +12,12 @@ import 'package:kyf/utils/toast.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String phoneNumber;
+  final String referenceId;
   
   const OtpVerificationScreen({
     super.key,
     required this.phoneNumber,
+    required this.referenceId,
   });
 
   @override
@@ -29,6 +33,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     6,
     (index) => FocusNode(),
   );
+  final _authService = AuthService();
   
   bool _isLoading = false;
   int _resendTimer = 30;
@@ -77,25 +82,80 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
     setState(() => _isLoading = true);
 
-    // TODO: Implement actual OTP verification logic
-    await Future.delayed(const Duration(seconds: 1));
+    final phoneNumber = '+91${widget.phoneNumber}';
+    final response = await _authService.verifyOtp(
+      referenceId: widget.referenceId,
+      phoneNumber: phoneNumber,
+      otp: _otp,
+    );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    // Navigate to home on success
-    context.go(AppRoutes.home);
+    // Print the response for debugging
+    debugPrint('OTP Verification Response: ${response.data}');
+
+    if (response.success) {
+      AppToast.success(context, 'Verified successfully!');
+      
+      // Parse response data
+      try {
+        final bodyData = response.data['body'];
+        Map<String, dynamic> parsedBody;
+        
+        if (bodyData is String) {
+          parsedBody = Map<String, dynamic>.from(
+            (const JsonDecoder().convert(bodyData)) as Map,
+          );
+        } else {
+          parsedBody = bodyData as Map<String, dynamic>;
+        }
+        
+        final data = parsedBody['data'] as Map<String, dynamic>?;
+        final isAlreadyVerified = data?['isAlreadyVerified'] as bool? ?? false;
+        final token = data?['token'] as String? ?? '';
+        final fullName = data?['fullName'] as String? ?? '';
+        
+        // TODO: Save token to secure storage
+        debugPrint('isAlreadyVerified: $isAlreadyVerified');
+        
+        if (isAlreadyVerified) {
+          // Existing user - go directly to home
+          context.go(AppRoutes.home);
+        } else {
+          // New user - go to complete profile
+          context.go(
+            AppRoutes.completeProfile,
+            extra: {
+              'token': token,
+              'fullName': fullName,
+            },
+          );
+        }
+      } catch (e) {
+        debugPrint('Error parsing response: $e');
+        context.go(AppRoutes.home);
+      }
+    } else {
+      AppToast.error(context, response.message ?? 'Invalid OTP');
+    }
   }
 
   Future<void> _resendOTP() async {
     if (!_canResend) return;
     
-    // TODO: Implement resend OTP logic
-    AppToast.success(
-      context,
-      'OTP sent to +91 ${widget.phoneNumber}',
-      title: 'Code Sent!',
-    );
+    final phoneNumber = '+91${widget.phoneNumber}';
+    final response = await _authService.generateOtp(phoneNumber: phoneNumber);
+    
+    if (response.success) {
+      AppToast.success(
+        context,
+        'OTP sent to +91 ${widget.phoneNumber}',
+        title: 'Code Sent!',
+      );
+    } else {
+      AppToast.error(context, response.message ?? 'Failed to resend OTP');
+    }
     
     _startResendTimer();
   }
