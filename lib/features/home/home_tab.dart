@@ -1,24 +1,86 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:kyf/components/reusable/themeToggle.dart';
+import 'package:kyf/features/profile/profile_screen.dart';
+import 'package:kyf/models/user_profile.dart';
+import 'package:kyf/services/storage_service.dart';
 
 /// Home Tab
 /// Main home screen content
 
-class HomeTab extends ConsumerWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  UserProfile? _profile;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final storage = await StorageService.getInstance();
+    if (storage.hasProfile()) {
+      final data = storage.getProfile();
+      if (data != null && mounted) {
+        setState(() {
+          _profile = UserProfile.fromJson(data);
+        });
+      }
+    }
+  }
+
+  void _openProfile(BuildContext context) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ProfileScreen(),
+      ),
+    );
+    // Reload profile after returning from profile screen
+    _loadProfile();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('KYF'),
         centerTitle: false,
-        actions: const [
-          ThemeToggleButton(),
-          SizedBox(width: 8),
+        actions: [
+          GestureDetector(
+            onTap: () => _openProfile(context),
+            child: Container(
+              width: 36,
+              height: 36,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: theme.colorScheme.scrim,
+                  width: 2,
+                ),
+                image: _profile?.hasPhoto == true
+                    ? DecorationImage(
+                        image: NetworkImage(_profile!.photoUrl!),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: _profile?.hasPhoto != true
+                  ? Icon(
+                      Icons.person_rounded,
+                      size: 20,
+                      color: theme.colorScheme.scrim,
+                    )
+                  : null,
+            ),
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -60,7 +122,7 @@ class HomeTab extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.auto_awesome_rounded,
                     color: Colors.white,
                     size: 32,
