@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyf/app/routes/app_routes.dart';
+import 'package:kyf/services/storage_service.dart';
+import 'package:kyf/socket/socket_authentication.dart';
 
 /// Splash Screen
 /// Initial screen shown when app starts
@@ -48,9 +50,28 @@ class _SplashScreenState extends State<SplashScreen>
     
     if (!mounted) return;
     
-    // TODO: Check authentication status and navigate accordingly
-    // For now, navigate to login
-    context.go(AppRoutes.login);
+    // Check if user is logged in
+    final storage = await StorageService.getInstance();
+    final hasToken = storage.hasToken();
+    final isLoggedIn = storage.isLoggedIn();
+    
+    debugPrint('Has Token: $hasToken, Is Logged In: $isLoggedIn');
+    
+    if (hasToken && isLoggedIn) {
+      // Connect socket for logged in user
+      debugPrint('Connecting socket for existing session...');
+      SocketAuthentication.ensureAuthenticated().then((authenticated) {
+        debugPrint('Socket authenticated on app start: $authenticated');
+      }).catchError((e) {
+        debugPrint('Socket authentication error on app start: $e');
+      });
+      
+      // User is logged in, go to home
+      context.go(AppRoutes.home);
+    } else {
+      // User needs to login
+      context.go(AppRoutes.login);
+    }
   }
 
   @override
