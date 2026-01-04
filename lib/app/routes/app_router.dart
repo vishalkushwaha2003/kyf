@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kyf/app/routes/app_routes.dart';
 import 'package:kyf/components/main_navigation.dart';
+import 'package:kyf/features/auth/screens/complete_profile_screen.dart';
 import 'package:kyf/features/auth/screens/login_screen.dart';
 import 'package:kyf/features/auth/screens/otp_verification_screen.dart';
 import 'package:kyf/features/splash/splash_screen.dart';
@@ -38,9 +39,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.verifyOtp,
         name: 'verifyOtp',
         builder: (context, state) {
-          // Get phone number passed from login screen
-          final phoneNumber = state.extra as String? ?? '';
-          return OtpVerificationScreen(phoneNumber: phoneNumber);
+          // Get phone number and referenceId passed from login screen
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final phoneNumber = extra['phoneNumber'] as String? ?? '';
+          final referenceId = extra['referenceId'] as String? ?? '';
+          return OtpVerificationScreen(
+            phoneNumber: phoneNumber,
+            referenceId: referenceId,
+          );
+        },
+      ),
+
+      // Complete Profile (for new users)
+      GoRoute(
+        path: AppRoutes.completeProfile,
+        name: 'completeProfile',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          final token = extra['token'] as String? ?? '';
+          final initialName = extra['fullName'] as String? ?? '';
+          return CompleteProfileScreen(
+            token: token,
+            initialName: initialName,
+          );
         },
       ),
 
