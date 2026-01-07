@@ -31,4 +31,16 @@ class UserService {
       token: token,
     );
   }
+
+  /// Get all users with pagination
+  Future<ApiResponse> getAllUsers({
+    required String token,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    return await _api.get(
+      '${Endpoints.users.allUsers}?page=$page&limit=$limit',
+      token: token,
+    );
+  }
 }
