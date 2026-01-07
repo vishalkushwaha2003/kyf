@@ -10,6 +10,10 @@ import 'package:kyf/socket/socket_utils.dart';
 
 class SocketAuthentication {
   static final SocketManager _socketManager = SocketManager.instance;
+  static bool _isAuthenticated = false;
+  
+  /// Check if already authenticated
+  static bool get isAuthenticated => _isAuthenticated && _socketManager.isConnected;
 
   /// Authenticate the socket with the current access token
   static Future<Map<String, dynamic>?> authenticate() async {
@@ -58,6 +62,7 @@ class SocketAuthentication {
       debugPrint('[SocketAuth] Authentication response: $response');
 
       if (response != null && response['status'] == SocketConstants.status.authenticated) {
+        _isAuthenticated = true;
         SocketManager.onAuthenticationChange?.call(true);
         debugPrint('[SocketAuth] Socket authenticated successfully!');
         return response;
@@ -75,6 +80,12 @@ class SocketAuthentication {
 
   /// Ensure socket is authenticated
   static Future<bool> ensureAuthenticated() async {
+    // Return early if already authenticated
+    if (isAuthenticated) {
+      debugPrint('[SocketAuth] Already authenticated, skipping');
+      return true;
+    }
+    
     if (_socketManager.isAuthenticating) {
       // Wait for ongoing authentication
       for (int i = 0; i < 30; i++) {
