@@ -43,6 +43,9 @@ class Endpoints {
 
   // ============ Settings Endpoints ============
   static const settings = _SettingsEndpoints();
+
+  // ============ Feedback Endpoints ============
+  static const feedback = _FeedbackEndpoints();
 }
 
 /// Auth Endpoints
@@ -109,4 +112,12 @@ class _SettingsEndpoints {
   String get preferences => '/api/${ApiConfig.version}/settings/preferences';
   String get layout => '/api/${ApiConfig.version}/settings/layout';
   String get accessibility => '/api/${ApiConfig.version}/settings/accessibility';
+}
+
+/// Feedback Endpoints
+class _FeedbackEndpoints {
+  const _FeedbackEndpoints();
+
+  String get submit => '/api/${ApiConfig.version}/feedback/bug';
+  String get list => '/api/${ApiConfig.version}/feedback/my-feedback';
 }
