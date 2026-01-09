@@ -24,6 +24,22 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   void setSystemTheme() {
     state = ThemeMode.system;
   }
+
+  /// Set theme by mode name string ('light', 'dark', 'system')
+  void setThemeMode(String mode) {
+    switch (mode.toLowerCase()) {
+      case 'light':
+        state = ThemeMode.light;
+        break;
+      case 'dark':
+        state = ThemeMode.dark;
+        break;
+      case 'system':
+      default:
+        state = ThemeMode.system;
+        break;
+    }
+  }
 }
 
 /// Provider for theme mode management
