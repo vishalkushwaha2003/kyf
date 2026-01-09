@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:kyf/app/routes/app_routes.dart';
+import 'package:kyf/components/feedback_bottom_sheet.dart';
+import 'package:kyf/features/settings/settings_screen.dart';
 import 'package:kyf/models/user_profile.dart';
 import 'package:kyf/services/storage_service.dart';
 import 'package:kyf/services/user_service.dart';
@@ -140,6 +142,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _openSection(String section) {
     if (_profile == null) return;
+    
+    // Navigate to dedicated SettingsScreen for settings
+    if (section == 'settings') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const SettingsScreen(),
+        ),
+      );
+      return;
+    }
     
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -559,6 +571,19 @@ class _SectionDetailPage extends StatelessWidget {
     required this.profile,
   });
 
+  /// Handle item tap and open appropriate sheets/pages
+  void _handleItemTap(BuildContext context, _InfoItem item) {
+    switch (item.label) {
+      case 'Send Feedback':
+        FeedbackBottomSheet.show(context);
+        break;
+      // Add more cases here for other tappable items
+      default:
+        // For items without specific actions, do nothing or show a snackbar
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -630,63 +655,72 @@ class _SectionDetailPage extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final item = items[index];
-          return Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerLow,
+          return Material(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              onTap: () => _handleItemTap(context, item),
               borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(item.icon, color: theme.colorScheme.scrim, size: 18),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.label,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                        ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        item.value,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (item.badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: item.badge == 'Verified'
-                          ? Colors.green.withOpacity(0.1)
-                          : theme.colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      child: Icon(item.icon, color: theme.colorScheme.scrim, size: 18),
                     ),
-                    child: Text(
-                      item.badge!,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: item.badge == 'Verified' 
-                            ? Colors.green 
-                            : theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.label,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(0.5),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            item.value,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-              ],
+                    if (item.badge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: item.badge == 'Verified'
+                              ? Colors.green.withOpacity(0.1)
+                              : theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          item.badge!,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: item.badge == 'Verified' 
+                                ? Colors.green 
+                                : theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: theme.colorScheme.onSurface.withOpacity(0.3),
+                      ),
+                  ],
+                ),
+              ),
             ),
           );
         },
