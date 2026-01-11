@@ -32,6 +32,17 @@ class SocketAuthentication {
     try {
       _socketManager.isAuthenticating = true;
       final socket = _socketManager.getSocket(connectSocket: true);
+      
+      // IMPORTANT: Wait for socket to actually connect before authenticating
+      if (!socket.connected) {
+        debugPrint('[SocketAuth] Waiting for socket connection...');
+        final connected = await _waitForConnection(socket, timeout: const Duration(seconds: 10));
+        if (!connected) {
+          throw Exception('Socket connection timeout');
+        }
+        debugPrint('[SocketAuth] Socket connected, proceeding with authentication');
+      }
+      
       final storage = await StorageService.getInstance();
       final token = storage.getToken();
 
@@ -75,6 +86,57 @@ class SocketAuthentication {
       rethrow;
     } finally {
       _socketManager.isAuthenticating = false;
+    }
+  }
+
+  /// Wait for socket connection with timeout
+  static Future<bool> _waitForConnection(dynamic socket, {Duration timeout = const Duration(seconds: 10)}) async {
+    final completer = Completer<bool>();
+    Timer? timeoutTimer;
+    Function(dynamic)? connectHandler;
+    Function(dynamic)? errorHandler;
+
+    try {
+      // Set up timeout
+      timeoutTimer = Timer(timeout, () {
+        if (!completer.isCompleted) {
+          debugPrint('[SocketAuth] Connection timeout after ${timeout.inSeconds}s');
+          completer.complete(false);
+        }
+      });
+
+      // Listen for connect event
+      connectHandler = (_) {
+        timeoutTimer?.cancel();
+        if (!completer.isCompleted) {
+          debugPrint('[SocketAuth] Socket connected!');
+          completer.complete(true);
+        }
+      };
+
+      // Listen for connection error
+      errorHandler = (error) {
+        timeoutTimer?.cancel();
+        if (!completer.isCompleted) {
+          debugPrint('[SocketAuth] Connection error: $error');
+          completer.complete(false);
+        }
+      };
+
+      socket.on('connect', connectHandler);
+      socket.on('connect_error', errorHandler);
+
+      // Check if already connected
+      if (socket.connected) {
+        timeoutTimer.cancel();
+        return true;
+      }
+
+      return await completer.future;
+    } finally {
+      // Cleanup listeners
+      if (connectHandler != null) socket.off('connect', connectHandler);
+      if (errorHandler != null) socket.off('connect_error', errorHandler);
     }
   }
 
